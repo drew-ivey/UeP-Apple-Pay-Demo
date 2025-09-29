@@ -1,7 +1,7 @@
 import './style.css';
 
 // instantiate client with your public key
-let client = new usaepay.Client('NEED_PUBLIC_KEY_HERE');
+let client = new usaepay.Client('_ud00nT6N3100T93q63v8w29720f3db3qYIS6huWmB');
 
 let applePayConfig = {
 	targetDiv: 'applePayContainer',
