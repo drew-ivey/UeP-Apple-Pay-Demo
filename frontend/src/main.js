@@ -1,5 +1,5 @@
 import './style.css';
-
+/*
 // ✅ Wrap ApplePaySession with safety + debug
 if (window.ApplePaySession) {
 	const OriginalApplePaySession = window.ApplePaySession;
@@ -48,7 +48,7 @@ if (window.ApplePaySession) {
 		return session;
 	};
 }
-
+*/
 // ✅ Instantiate client with your public key
 let client = new usaepay.Client('_ud00nT6N3100T93q63v8w29720f3db3qYIS6huWmB');
 
