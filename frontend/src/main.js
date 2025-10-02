@@ -1,4 +1,57 @@
 import './style.css';
+// Store the original ApplePaySession
+const OriginalApplePaySession = window.ApplePaySession;
+
+// Track the active session globally
+window.activeApplePaySession = null;
+
+// Override ApplePaySession constructor
+window.ApplePaySession = function (version, request) {
+	console.log('[ApplePay] Attempting to create new session...');
+
+	// If there's already a session, abort it
+	if (window.activeApplePaySession) {
+		try {
+			console.warn(
+				'[ApplePay] Aborting existing session before creating a new one'
+			);
+			window.activeApplePaySession.abort();
+		} catch (err) {
+			console.error('[ApplePay] Failed to abort existing session:', err);
+		}
+	}
+
+	// Create a new real session
+	const session = new OriginalApplePaySession(version, request);
+
+	// Track it as the active session
+	window.activeApplePaySession = session;
+
+	// Attach debug lifecycle listeners
+	session.oncancel = (event) => {
+		console.log('[ApplePay] Session canceled:', event);
+		window.activeApplePaySession = null;
+	};
+	session.onabort = (event) => {
+		console.log('[ApplePay] Session aborted:', event);
+		window.activeApplePaySession = null;
+	};
+	session.onerror = (event) => {
+		console.error('[ApplePay] Session error:', event);
+		// Don’t clear yet — let dev inspect if it hangs
+	};
+	session.onvalidatemerchant = (event) => {
+		console.log('[ApplePay] Merchant validation triggered:', event);
+	};
+	session.onpaymentauthorized = (event) => {
+		console.log('[ApplePay] Payment authorized:', event);
+	};
+	session.onpaymentmethodselected = (event) => {
+		console.log('[ApplePay] Payment method selected:', event);
+	};
+
+	return session;
+};
 
 // instantiate client with your public key
 let client = new usaepay.Client('_ud00nT6N3100T93q63v8w29720f3db3qYIS6huWmB');
