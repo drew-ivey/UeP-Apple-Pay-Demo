@@ -1,61 +1,58 @@
 import './style.css';
-// Store the original ApplePaySession
-const OriginalApplePaySession = window.ApplePaySession;
 
-// Track the active session globally
-window.activeApplePaySession = null;
+// ✅ Wrap ApplePaySession with safety + debug
+if (window.ApplePaySession) {
+	const OriginalApplePaySession = window.ApplePaySession;
+	window.activeApplePaySession = null;
 
-// Override ApplePaySession constructor
-window.ApplePaySession = function (version, request) {
-	console.log('[ApplePay] Attempting to create new session...');
+	window.ApplePaySession = function (version, request) {
+		console.log('[ApplePay] Attempting to create new session...');
 
-	// If there's already a session, abort it
-	if (window.activeApplePaySession) {
-		try {
-			console.warn(
-				'[ApplePay] Aborting existing session before creating a new one'
-			);
-			window.activeApplePaySession.abort();
-		} catch (err) {
-			console.error('[ApplePay] Failed to abort existing session:', err);
+		// If an existing session is active, abort it
+		if (window.activeApplePaySession) {
+			try {
+				console.warn(
+					'[ApplePay] Aborting existing session before creating a new one'
+				);
+				window.activeApplePaySession.abort();
+			} catch (err) {
+				console.error('[ApplePay] Failed to abort existing session:', err);
+			}
 		}
-	}
 
-	// Create a new real session
-	const session = new OriginalApplePaySession(version, request);
+		const session = new OriginalApplePaySession(version, request);
+		window.activeApplePaySession = session;
 
-	// Track it as the active session
-	window.activeApplePaySession = session;
+		// Debug lifecycle events
+		session.oncancel = (event) => {
+			console.log('[ApplePay] Session canceled:', event);
+			window.activeApplePaySession = null;
+		};
+		session.onabort = (event) => {
+			console.log('[ApplePay] Session aborted:', event);
+			window.activeApplePaySession = null;
+		};
+		session.onerror = (event) => {
+			console.error('[ApplePay] Session error:', event);
+		};
+		session.onvalidatemerchant = (event) => {
+			console.log('[ApplePay] Merchant validation triggered:', event);
+		};
+		session.onpaymentauthorized = (event) => {
+			console.log('[ApplePay] Payment authorized:', event);
+		};
+		session.onpaymentmethodselected = (event) => {
+			console.log('[ApplePay] Payment method selected:', event);
+		};
 
-	// Attach debug lifecycle listeners
-	session.oncancel = (event) => {
-		console.log('[ApplePay] Session canceled:', event);
-		window.activeApplePaySession = null;
+		return session;
 	};
-	session.onabort = (event) => {
-		console.log('[ApplePay] Session aborted:', event);
-		window.activeApplePaySession = null;
-	};
-	session.onerror = (event) => {
-		console.error('[ApplePay] Session error:', event);
-		// Don’t clear yet — let dev inspect if it hangs
-	};
-	session.onvalidatemerchant = (event) => {
-		console.log('[ApplePay] Merchant validation triggered:', event);
-	};
-	session.onpaymentauthorized = (event) => {
-		console.log('[ApplePay] Payment authorized:', event);
-	};
-	session.onpaymentmethodselected = (event) => {
-		console.log('[ApplePay] Payment method selected:', event);
-	};
+}
 
-	return session;
-};
-
-// instantiate client with your public key
+// ✅ Instantiate client with your public key
 let client = new usaepay.Client('_ud00nT6N3100T93q63v8w29720f3db3qYIS6huWmB');
 
+// ✅ Config for Apple Pay
 let applePayConfig = {
 	targetDiv: 'applePayContainer',
 	displayName: 'Capsule Corp.',
@@ -75,7 +72,7 @@ let applePayConfig = {
 	},
 };
 
-// Populate the product info card
+// ✅ Populate product info
 const lineItemsContainer = document.getElementById('lineItems');
 const totalAmountEl = document.getElementById('totalAmount');
 
@@ -93,27 +90,24 @@ totalAmountEl.textContent = `$${parseFloat(
 	applePayConfig.paymentRequest.total.amount
 ).toFixed(2)}`;
 
-// Instantiate ApplePay Entry
+// ✅ Create Apple Pay Entry
 let applePay = client.createApplePayEntry(applePayConfig);
 
-// Check Apple Pay compatibility
+// ✅ Check Apple Pay compatibility
 applePay
 	.checkCompatibility()
 	.then(() => {
-		// show button if compatible
 		applePay.addButton();
 	})
 	.catch(() => {
 		document.getElementById('applePayContainer').style.display = 'none';
 	});
 
-// Listen for successful Apple Pay completion
+// ✅ Success Handler
 applePay.on('applePaySuccess', function () {
 	client
 		.getPaymentKey(applePay)
-		.then((result) => {
-			paymentKeyHandler(result);
-		})
+		.then((result) => paymentKeyHandler(result))
 		.catch((res) => {
 			console.error('CATCH: ', res);
 			document.getElementById('paymentCardErrorContainer').innerText =
@@ -121,13 +115,13 @@ applePay.on('applePaySuccess', function () {
 		});
 });
 
-// Listen for Apple Pay errors
+// ✅ Error Handler
 applePay.on('applePayError', function () {
 	document.getElementById('paymentCardErrorContainer').innerText =
 		'Apple Pay failed. Please try again.';
 });
 
-// Insert token into form and submit
+// ✅ Send payment token to backend
 function paymentKeyHandler(token) {
 	console.log('Sending payment key to backend:', token);
 
